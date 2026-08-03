@@ -28,11 +28,13 @@ nonisolated func displayOffStopLabel(_ minutes: Int) -> String {
 }
 
 /// Snap slider over the 13 stop indexes (0…12), equidistant, with a tick row.
-/// `onCommit` fires when the user releases the thumb.
+/// `onCommit` fires when the user releases the thumb; `onDragChange` reports
+/// drag start/end for live preview.
 struct DisplayOffSlider: View {
     @Binding var index: Int
     var disabled = false
     var onCommit: () -> Void = {}
+    var onDragChange: (Bool) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 5) {
@@ -44,6 +46,7 @@ struct DisplayOffSlider: View {
                 in: 0...12,
                 step: 1,
                 onEditingChanged: { editing in
+                    onDragChange(editing)
                     if !editing { onCommit() }
                 }
             )
@@ -68,6 +71,7 @@ struct PopoverView: View {
     @State private var launchAtLogin = false
     @State private var loginError: String?
     @State private var sliderIndex = 0
+    @State private var isDraggingSlider = false
     @State private var showExpander = false
     @State private var isWriting = false
     @State private var writeError: String?
@@ -80,7 +84,14 @@ struct PopoverView: View {
                 Text("不活跃时关闭显示器")
                     .font(.headline)
                 Spacer()
-                if let value = model.activeValue {
+                if isDraggingSlider || isWriting {
+                    // Live preview while dragging AND while the write is in flight;
+                    // falls back to the committed value only after the write settles.
+                    Text(displayOffStopLabel(displayOffStops[sliderIndex]))
+                        .font(.subheadline)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.accentColor)
+                } else if let value = model.activeValue {
                     Text(displayOffStopLabel(value))
                         .font(.subheadline)
                         .monospacedDigit()
@@ -99,9 +110,12 @@ struct PopoverView: View {
             if model.readFailed {
                 readFailureRow
             } else {
-                DisplayOffSlider(index: $sliderIndex, disabled: model.isLoading || isWriting) {
-                    commitMainSlider()
-                }
+                DisplayOffSlider(
+                    index: $sliderIndex,
+                    disabled: model.isLoading || isWriting,
+                    onCommit: { commitMainSlider() },
+                    onDragChange: { isDraggingSlider = $0 }
+                )
                 if let value = model.activeValue, !displayOffStops.contains(value) {
                     Text("系统设置中为其他值：\(displayOffStopLabel(value))")
                         .font(.caption2)
@@ -189,14 +203,16 @@ struct PopoverView: View {
                 PerSourceSliderRow(
                     source: .battery,
                     value: model.values[.battery],
-                    disabled: isWriting
+                    disabled: isWriting,
+                    isCommitting: isWriting
                 ) { minutes, snapBack in
                     commitWrite(minutes, source: .battery, snapBack: snapBack)
                 }
                 PerSourceSliderRow(
                     source: .ac,
                     value: model.values[.ac],
-                    disabled: isWriting
+                    disabled: isWriting,
+                    isCommitting: isWriting
                 ) { minutes, snapBack in
                     commitWrite(minutes, source: .ac, snapBack: snapBack)
                 }
@@ -303,9 +319,11 @@ private struct PerSourceSliderRow: View {
     let source: PowerSource
     var value: Int?
     var disabled: Bool
+    var isCommitting: Bool
     var onCommit: (Int, @escaping () -> Void) -> Void
 
     @State private var index = 0
+    @State private var isDragging = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -313,7 +331,12 @@ private struct PerSourceSliderRow: View {
                 Text(source == .battery ? "电池" : "电源适配器")
                     .font(.caption)
                 Spacer()
-                if let value {
+                if isDragging || isCommitting {
+                    Text(displayOffStopLabel(displayOffStops[index]))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.accentColor)
+                } else if let value {
                     Text(displayOffStopLabel(value))
                         .font(.caption)
                         .monospacedDigit()
@@ -332,6 +355,7 @@ private struct PerSourceSliderRow: View {
                 in: 0...12,
                 step: 1,
                 onEditingChanged: { editing in
+                    isDragging = editing
                     if !editing, let value {
                         let minutes = displayOffStops[index]
                         guard minutes != value else { return }
