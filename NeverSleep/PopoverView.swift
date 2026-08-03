@@ -5,6 +5,7 @@
 //  Created by Melse on 2026/8/3.
 //
 
+import AppKit
 import SwiftUI
 
 /// The 13 system stops, left→right: Never(0) … 180 minutes. Equidistant on track.
@@ -26,9 +27,11 @@ nonisolated func displayOffStopLabel(_ minutes: Int) -> String {
 }
 
 /// Snap slider over the 13 stop indexes (0…12), equidistant, with a tick row.
+/// `onCommit` fires when the user releases the thumb.
 struct DisplayOffSlider: View {
     @Binding var index: Int
     var disabled = false
+    var onCommit: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 5) {
@@ -38,7 +41,10 @@ struct DisplayOffSlider: View {
                     set: { index = Int($0.rounded()) }
                 ),
                 in: 0...12,
-                step: 1
+                step: 1,
+                onEditingChanged: { editing in
+                    if !editing { onCommit() }
+                }
             )
             .disabled(disabled)
             HStack(spacing: 0) {
@@ -61,9 +67,10 @@ struct PopoverView: View {
     @State private var launchAtLogin = false
     @State private var sliderIndex = 0
     @State private var showExpander = false
+    @State private var isWriting = false
+    @State private var writeError: String?
 
     var body: some View {
-        @Bindable var model = model
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Image(systemName: "moon.zzz.fill")
@@ -90,7 +97,9 @@ struct PopoverView: View {
             if model.readFailed {
                 readFailureRow
             } else {
-                DisplayOffSlider(index: $sliderIndex, disabled: model.isLoading)
+                DisplayOffSlider(index: $sliderIndex, disabled: model.isLoading || isWriting) {
+                    commitMainSlider()
+                }
                 if let value = model.activeValue, !displayOffStops.contains(value) {
                     Text("系统设置中为其他值：\(displayOffStopLabel(value))")
                         .font(.caption2)
@@ -98,6 +107,11 @@ struct PopoverView: View {
                 }
                 if model.hasBattery {
                     expanderRow
+                }
+                if let writeError {
+                    Text(writeError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
                 Text("修改需输入管理员密码")
                     .font(.caption)
@@ -160,9 +174,21 @@ struct PopoverView: View {
 
     private var expanderRow: some View {
         DisclosureGroup(isExpanded: $showExpander) {
-            VStack(alignment: .leading, spacing: 8) {
-                perSourceRow(.battery)
-                perSourceRow(.ac)
+            VStack(alignment: .leading, spacing: 10) {
+                PerSourceSliderRow(
+                    source: .battery,
+                    value: model.values[.battery],
+                    disabled: isWriting
+                ) { minutes, snapBack in
+                    commitWrite(minutes, source: .battery, snapBack: snapBack)
+                }
+                PerSourceSliderRow(
+                    source: .ac,
+                    value: model.values[.ac],
+                    disabled: isWriting
+                ) { minutes, snapBack in
+                    commitWrite(minutes, source: .ac, snapBack: snapBack)
+                }
             }
             .padding(.top, 4)
         } label: {
@@ -176,22 +202,59 @@ struct PopoverView: View {
         }
     }
 
-    private func perSourceRow(_ source: PowerSource) -> some View {
-        HStack {
-            Text(source == .battery ? "电池" : "电源适配器")
-                .font(.caption)
-            Spacer()
-            if let value = model.values[source] {
-                Text(displayOffStopLabel(value))
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+    // MARK: - Write flow
+
+    private func commitMainSlider() {
+        guard let current = model.activeValue else { return }
+        let minutes = displayOffStops[sliderIndex]
+        guard minutes != current else { return }
+        commitWrite(minutes, source: model.activeSource) {
+            sliderIndex = nearestStopIndex(for: current)
+        }
+    }
+
+    private func commitWrite(
+        _ minutes: Int,
+        source: PowerSource,
+        snapBack: @escaping () -> Void
+    ) {
+        guard !isWriting else { return }
+        guard presentFirstWriteHintIfNeeded() else {
+            snapBack()
+            return
+        }
+        isWriting = true
+        writeError = nil
+        Task {
+            let ok = await model.apply(minutes, to: source)
+            isWriting = false
+            if ok {
+                model.values[source] = minutes
             } else {
-                Text("—")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                writeError = "写入失败（密码取消或未授权）"
+                snapBack()
             }
         }
+    }
+
+    /// One-time first-write notice; returns false if the user cancels.
+    private func presentFirstWriteHintIfNeeded() -> Bool {
+        let key = "NeverSleep.writeHintShown"
+        if UserDefaults.standard.bool(forKey: key) { return true }
+
+        let alert = NSAlert()
+        alert.messageText = "修改需输入管理员密码"
+        alert.informativeText = "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。"
+        let checkbox = NSButton(checkboxWithTitle: "不再提示", target: nil, action: nil)
+        alert.accessoryView = checkbox
+        alert.addButton(withTitle: "继续")
+        alert.addButton(withTitle: "取消")
+
+        let response = alert.runModal()
+        if checkbox.state == .on {
+            UserDefaults.standard.set(true, forKey: key)
+        }
+        return response == .alertFirstButtonReturn
     }
 
     // MARK: - Helpers
@@ -205,6 +268,61 @@ struct PopoverView: View {
     private func openLockScreenSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension") else { return }
         NSWorkspace.shared.open(url)
+    }
+}
+
+/// One slider per power source, shown in the expander on battery machines.
+private struct PerSourceSliderRow: View {
+    let source: PowerSource
+    var value: Int?
+    var disabled: Bool
+    var onCommit: (Int, @escaping () -> Void) -> Void
+
+    @State private var index = 0
+
+    var body: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text(source == .battery ? "电池" : "电源适配器")
+                    .font(.caption)
+                Spacer()
+                if let value {
+                    Text(displayOffStopLabel(value))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("—")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            Slider(
+                value: Binding(
+                    get: { Double(index) },
+                    set: { index = Int($0.rounded()) }
+                ),
+                in: 0...12,
+                step: 1,
+                onEditingChanged: { editing in
+                    if !editing, let value {
+                        let minutes = displayOffStops[index]
+                        guard minutes != value else { return }
+                        onCommit(minutes) {
+                            index = nearestStopIndex(for: value)
+                        }
+                    }
+                }
+            )
+            .disabled(disabled)
+            .controlSize(.small)
+        }
+        .onAppear {
+            if let value { index = nearestStopIndex(for: value) }
+        }
+        .onChange(of: value) {
+            if let value { index = nearestStopIndex(for: value) }
+        }
     }
 }
 

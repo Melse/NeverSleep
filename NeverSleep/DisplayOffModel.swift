@@ -111,6 +111,34 @@ final class DisplayOffModel {
         }
     }
 
+    /// Write a display-off value for a source via admin-auth `pmset`
+    /// (`osascript … with administrator privileges` → SecurityAgent prompt).
+    /// Returns false on cancel/wrong password/any non-zero exit.
+    func apply(_ minutes: Int, to source: PowerSource) async -> Bool {
+        await Task.detached(priority: .userInitiated) {
+            let flag = source == .battery ? "-b" : "-c"
+            let script = "do shell script \"/usr/bin/pmset \(flag) displaysleep \(minutes)\" with administrator privileges"
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.arguments = ["-e", script]
+
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+
+            do {
+                try process.run()
+            } catch {
+                return false
+            }
+
+            pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        }.value
+    }
+
     // MARK: - Internals
 
     private static func currentPowerSource() async -> PowerSource {
