@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import ServiceManagement
 import SwiftUI
 
 /// The 13 system stops, left→right: Never(0) … 180 minutes. Equidistant on track.
@@ -65,6 +66,7 @@ struct DisplayOffSlider: View {
 struct PopoverView: View {
     @Environment(DisplayOffModel.self) private var model
     @State private var launchAtLogin = false
+    @State private var loginError: String?
     @State private var sliderIndex = 0
     @State private var showExpander = false
     @State private var isWriting = false
@@ -121,6 +123,14 @@ struct PopoverView: View {
             Divider()
             Toggle("登录时启动", isOn: $launchAtLogin)
                 .toggleStyle(.switch)
+                .onChange(of: launchAtLogin) {
+                    Task { await updateLaunchAtLogin() }
+                }
+            if let loginError {
+                Text(loginError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
             Divider()
             Button("在系统设置中打开…") {
                 openLockScreenSettings()
@@ -137,6 +147,7 @@ struct PopoverView: View {
         .padding(16)
         .frame(width: 300)
         .onAppear {
+            launchAtLogin = SMAppService.mainApp.status == .enabled
             syncSliderToModel()
             Task { await model.read() }
         }
@@ -234,6 +245,22 @@ struct PopoverView: View {
                 writeError = "写入失败（密码取消或未授权）"
                 snapBack()
             }
+        }
+    }
+
+    /// Register/unregister the login item; revert the toggle and show a short
+    /// error on failure (e.g. Debug app outside /Applications).
+    private func updateLaunchAtLogin() async {
+        loginError = nil
+        do {
+            if launchAtLogin {
+                try SMAppService.mainApp.register()
+            } else {
+                try await SMAppService.mainApp.unregister()
+            }
+        } catch {
+            loginError = "无法更新登录项：\(error.localizedDescription)"
+            launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
 
