@@ -9,13 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        // PROTOTYPE — PopoverLayoutPrototype.swift; replaced by the real popover later.
+        PopoverLayoutPrototype()
     }
 }
 
