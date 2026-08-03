@@ -48,3 +48,4 @@ fastlane/test_output
 
 # Scratch / local agent work
 .scratch/
+dist/
