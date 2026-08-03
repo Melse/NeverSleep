@@ -9,18 +9,13 @@ import SwiftUI
 
 @main
 struct NeverSleepApp: App {
-    init() {
-        // Pure menu-bar app: no Dock icon, no standing main window.
-        NSApplication.shared.setActivationPolicy(.accessory)
-    }
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra {
-            PopoverView()
-        } label: {
-            // Icon + short value text; 「—」 until the read path lands (Build: read path).
-            Label("—", systemImage: "moon.zzz")
+        // Placeholder scene: the real UI lives in the status item + popover
+        // (AppDelegate). No Dock icon, no standing main window.
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.window)
     }
 }
