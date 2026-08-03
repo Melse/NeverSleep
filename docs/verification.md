@@ -27,7 +27,10 @@ open ~/Library/Developer/Xcode/DerivedData/NeverSleep-*/Build/Products/Debug/Nev
 
 ## 写入
 
-- [ ] 拖动滑块松手 → 首次出现「修改需输入管理员密码」提示（可勾选不再提示）
+- [x] 免密配置：首次拖动 → 说明框 → 一次管理员密码 → 写入 `/etc/sudoers.d/neversleep`（root:wheel 440）
+- [x] 之后拖动：`sudo -n pmset` 静默生效，不再弹密码（2026-08-03 已验证）
+- [x] 手动移除免密配置：`sudo rm /etc/sudoers.d/neversleep`（恢复每次弹密码）
+- [ ] 拖动滑块松手 → 首次出现「首次修改需输入管理员密码」提示（可勾选不再提示）
 - [ ] 输管理员密码 → `pmset -g custom` 与系统设置面板值同步更新
 - [ ] 取消/输错密码 → 滑块弹回旧值 + 红色错误行「写入失败（密码取消或未授权）」
 - [ ] 深链按钮（在系统设置中打开…）→ 打开系统设置锁定屏幕页
@@ -60,5 +63,6 @@ open ~/Library/Developer/Xcode/DerivedData/NeverSleep-*/Build/Products/Debug/Nev
 
 - 菜单栏仅图标 + 数字（60）、无 Dock
 - popover 读取「1 小时」、写路径（拖动 → 密码 → `displaysleep 2`）
+- 免密写：首次一次密码配置 sudoers 规则，之后拖动静默生效（`sudo -n pmset` 验证）
 - 登录项注册/持久化（`sfltool dumpbtm` 确认；重启后开关保持）
 - 单测 8 项通过（`xcodebuild test -only-testing:NeverSleepTests`）
