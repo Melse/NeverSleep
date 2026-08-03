@@ -12,18 +12,18 @@ import SwiftUI
 /// The 13 system stops, left→right: Never(0) … 180 minutes. Equidistant on track.
 nonisolated let displayOffStops: [Int] = [0, 1, 2, 3, 5, 10, 20, 30, 60, 90, 120, 150, 180]
 
-/// System-aligned wording for a display-off value in minutes. Full localization
-/// lands in Build: localization and verification checklist.
+/// System-aligned wording for a display-off value in minutes, localized via
+/// the string catalog (EN + zh-Hans).
 nonisolated func displayOffStopLabel(_ minutes: Int) -> String {
     switch minutes {
-    case 0: return "永不"
-    case 1: return "1 分钟"
-    case 60: return "1 小时"
-    case 90: return "1 小时 30 分钟"
-    case 120: return "2 小时"
-    case 150: return "2 小时 30 分钟"
-    case 180: return "3 小时"
-    default: return "\(minutes) 分钟"
+    case 0: return String(localized: "永不")
+    case 1: return String(localized: "1 分钟")
+    case 60: return String(localized: "1 小时")
+    case 90: return String(localized: "1 小时 30 分钟")
+    case 120: return String(localized: "2 小时")
+    case 150: return String(localized: "2 小时 30 分钟")
+    case 180: return String(localized: "3 小时")
+    default: return String(localized: "\(minutes) 分钟")
     }
 }
 
@@ -242,7 +242,7 @@ struct PopoverView: View {
             if ok {
                 model.values[source] = minutes
             } else {
-                writeError = "写入失败（密码取消或未授权）"
+                writeError = String(localized: "写入失败（密码取消或未授权）")
                 snapBack()
             }
         }
@@ -259,7 +259,7 @@ struct PopoverView: View {
                 try await SMAppService.mainApp.unregister()
             }
         } catch {
-            loginError = "无法更新登录项：\(error.localizedDescription)"
+            loginError = String(localized: "无法更新登录项：\(error.localizedDescription)")
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
@@ -270,12 +270,12 @@ struct PopoverView: View {
         if UserDefaults.standard.bool(forKey: key) { return true }
 
         let alert = NSAlert()
-        alert.messageText = "修改需输入管理员密码"
-        alert.informativeText = "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。"
-        let checkbox = NSButton(checkboxWithTitle: "不再提示", target: nil, action: nil)
+        alert.messageText = String(localized: "修改需输入管理员密码")
+        alert.informativeText = String(localized: "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。")
+        let checkbox = NSButton(checkboxWithTitle: String(localized: "不再提示"), target: nil, action: nil)
         alert.accessoryView = checkbox
-        alert.addButton(withTitle: "继续")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: String(localized: "继续"))
+        alert.addButton(withTitle: String(localized: "取消"))
 
         let response = alert.runModal()
         if checkbox.state == .on {

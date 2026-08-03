@@ -1,0 +1,168 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "1 分钟" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "1 minute" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "1 分钟" } }
+      }
+    },
+    "1 小时" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "1 hour" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "1 小时" } }
+      }
+    },
+    "1 小时 30 分钟" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "1 hour 30 minutes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "1 小时 30 分钟" } }
+      }
+    },
+    "2 小时" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "2 hours" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "2 小时" } }
+      }
+    },
+    "2 小时 30 分钟" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "2 hours 30 minutes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "2 小时 30 分钟" } }
+      }
+    },
+    "3 小时" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "3 hours" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "3 小时" } }
+      }
+    },
+    "%lld 分钟" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld minutes" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%lld 分钟" } }
+      }
+    },
+    "不活跃时关闭显示器" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn display off when inactive" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不活跃时关闭显示器" } }
+      }
+    },
+    "永不" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Never" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "永不" } }
+      }
+    },
+    "读取中…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reading…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "读取中…" } }
+      }
+    },
+    "无法读取" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to read" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法读取" } }
+      }
+    },
+    "无法读取当前设置" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to read current settings" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法读取当前设置" } }
+      }
+    },
+    "重试" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
+      }
+    },
+    "在系统设置中打开…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open in System Settings…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在系统设置中打开…" } }
+      }
+    },
+    "退出" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出" } }
+      }
+    },
+    "登录时启动" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch at login" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录时启动" } }
+      }
+    },
+    "修改需输入管理员密码" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changing requires an administrator password" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "修改需输入管理员密码" } }
+      }
+    },
+    "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Changing “Turn display off when inactive” requires administrator permission. A system password prompt appears for each change." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。" } }
+      }
+    },
+    "继续" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续" } }
+      }
+    },
+    "取消" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+      }
+    },
+    "不再提示" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Don't show again" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不再提示" } }
+      }
+    },
+    "电池" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Battery" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "电池" } }
+      }
+    },
+    "电源适配器" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Power Adapter" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "电源适配器" } }
+      }
+    },
+    "电池 / 电源适配器" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Battery / Power Adapter" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "电池 / 电源适配器" } }
+      }
+    },
+    "系统设置中为其他值：%@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System Settings has a different value: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "系统设置中为其他值：%@" } }
+      }
+    },
+    "写入失败（密码取消或未授权）" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Write failed (password cancelled or not authorized)" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "写入失败（密码取消或未授权）" } }
+      }
+    },
+    "无法更新登录项：%@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't update login item: %@" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法更新登录项：%@" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
