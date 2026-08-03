@@ -103,6 +103,18 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "修改需输入管理员密码" } }
       }
     },
+    "首次修改需输入管理员密码" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "First change requires an administrator password" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首次修改需输入管理员密码" } }
+      }
+    },
+    "首次修改将弹出一次管理员密码，为「不活跃时关闭显示器」配置免密权限；之后修改无需再输入密码。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The first change prompts once for an administrator password to set up passwordless access for “Turn display off when inactive”; later changes won't ask again." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首次修改将弹出一次管理员密码，为「不活跃时关闭显示器」配置免密权限；之后修改无需再输入密码。" } }
+      }
+    },
     "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Changing “Turn display off when inactive” requires administrator permission. A system password prompt appears for each change." } },

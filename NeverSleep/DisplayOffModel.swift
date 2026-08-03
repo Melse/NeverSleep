@@ -111,14 +111,55 @@ final class DisplayOffModel {
         }
     }
 
-    /// Write a display-off value for a source via admin-auth `pmset`
-    /// (`osascript … with administrator privileges` → SecurityAgent prompt).
+    /// Write a display-off value for a source. Tries `sudo -n pmset` first
+    /// (no prompt when the sudoers rule exists); on first use installs a
+    /// one-time NOPASSWD rule for `/usr/bin/pmset` via admin auth, then retries.
     /// Returns false on cancel/wrong password/any non-zero exit.
     func apply(_ minutes: Int, to source: PowerSource) async -> Bool {
-        await Task.detached(priority: .userInitiated) {
-            let flag = source == .battery ? "-b" : "-c"
-            let script = "do shell script \"/usr/bin/pmset \(flag) displaysleep \(minutes)\" with administrator privileges"
+        let flag = source == .battery ? "-b" : "-c"
+        if await Self.runSudoPMset(flag: flag, minutes: minutes) {
+            return true
+        }
+        // No sudoers rule yet — one-time admin setup, then retry.
+        guard await Self.installSudoersRule() else { return false }
+        return await Self.runSudoPMset(flag: flag, minutes: minutes)
+    }
 
+    /// `sudo -n /usr/bin/pmset <flag> displaysleep <minutes>` — non-interactive,
+    /// succeeds only when the sudoers rule is in place.
+    private static func runSudoPMset(flag: String, minutes: Int) async -> Bool {
+        await Task.detached(priority: .userInitiated) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
+            process.arguments = ["-n", "/usr/bin/pmset", flag, "displaysleep", String(minutes)]
+
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+
+            do {
+                try process.run()
+            } catch {
+                return false
+            }
+            pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        }.value
+    }
+
+    /// One-time admin-auth setup of `/etc/sudoers.d/neversleep`:
+    /// `<user> ALL=(root) NOPASSWD: /usr/bin/pmset`. User name is validated
+    /// against a strict charset before interpolation.
+    private static func installSudoersRule() async -> Bool {
+        let user = NSUserName()
+        guard user.range(of: #"^[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil else {
+            return false
+        }
+        let shell = "printf '%s\\n' '\(user) ALL=(root) NOPASSWD: /usr/bin/pmset' > /etc/sudoers.d/neversleep && chown root:wheel /etc/sudoers.d/neversleep && chmod 440 /etc/sudoers.d/neversleep"
+        let script = "do shell script \"\(shell)\" with administrator privileges"
+
+        return await Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
             process.arguments = ["-e", script]
@@ -132,7 +173,6 @@ final class DisplayOffModel {
             } catch {
                 return false
             }
-
             pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             return process.terminationStatus == 0

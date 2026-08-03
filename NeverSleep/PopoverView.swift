@@ -129,7 +129,7 @@ struct PopoverView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
-                Text("修改需输入管理员密码")
+                Text("首次修改需输入管理员密码")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -280,14 +280,15 @@ struct PopoverView: View {
         }
     }
 
-    /// One-time first-write notice; returns false if the user cancels.
+    /// One-time first-write notice: explains the single admin prompt that
+    /// installs the passwordless sudoers rule. Returns false if the user cancels.
     private func presentFirstWriteHintIfNeeded() -> Bool {
         let key = "NeverSleep.writeHintShown"
         if UserDefaults.standard.bool(forKey: key) { return true }
 
         let alert = NSAlert()
-        alert.messageText = String(localized: "修改需输入管理员密码")
-        alert.informativeText = String(localized: "修改「不活跃时关闭显示器」需要管理员权限，每次修改会弹出系统密码确认框。")
+        alert.messageText = String(localized: "首次修改需输入管理员密码")
+        alert.informativeText = String(localized: "首次修改将弹出一次管理员密码，为「不活跃时关闭显示器」配置免密权限；之后修改无需再输入密码。")
         let checkbox = NSButton(checkboxWithTitle: String(localized: "不再提示"), target: nil, action: nil)
         alert.accessoryView = checkbox
         alert.addButton(withTitle: String(localized: "继续"))
