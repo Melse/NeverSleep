@@ -19,13 +19,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
 
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Fixed width: the label width must not change when the value's digit
+        // count changes (1→60→180), or the popover anchor drifts.
+        let item = NSStatusBar.system.statusItem(withLength: 56)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "NeverSleep")
-            button.imagePosition = .imageLeading
-            button.title = model.menuBarText
+            button.alignment = .right
             button.action = #selector(togglePopover(_:))
             button.target = self
+            updateMenuBarTitle()
         }
         statusItem = item
 
@@ -40,13 +41,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await model.read() }
     }
 
+    /// Menu bar label: moon icon as a text attachment + monospaced-digit value,
+    /// right-aligned in the fixed-width item. One text line keeps the icon and
+    /// digits on the same baseline.
+    private func updateMenuBarTitle() {
+        guard let button = statusItem?.button else { return }
+        let attachment = NSTextAttachment()
+        attachment.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "NeverSleep")
+        attachment.bounds = NSRect(x: 0, y: -1.5, width: 14, height: 14)
+        let attributed = NSMutableAttributedString(attachment: attachment)
+        attributed.append(NSAttributedString(
+            string: "  \(model.menuBarText)",
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: NSColor.labelColor,
+            ]
+        ))
+        button.attributedTitle = attributed
+    }
+
     /// Observation-based menu bar title updates: re-register on every change.
     private func observeModelChanges() {
         withObservationTracking {
             _ = model.menuBarText
         } onChange: {
             Task { @MainActor in
-                self.statusItem?.button?.title = self.model.menuBarText
+                self.updateMenuBarTitle()
                 self.observeModelChanges()
             }
         }
