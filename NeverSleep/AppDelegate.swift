@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private let model = DisplayOffModel()
+    private let audioModel = AudioOutputModel()
+    private var audioSession: AudioOutputSession?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -30,11 +32,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusItem = item
 
-        let hosting = NSHostingController(rootView: PopoverView().environment(model))
         let popover = NSPopover()
+        let session = AudioOutputSession(parent: popover, model: audioModel)
+        let hosting = NSHostingController(
+            rootView: PopoverView()
+                .environment(model)
+                .environment(audioModel)
+                .environment(session)
+        )
         popover.behavior = .transient
         popover.contentViewController = hosting
         popover.contentSize = hosting.view.fittingSize
+        session.attachParent(popover)
+        audioSession = session
         self.popover = popover
 
         observeModelChanges()
@@ -75,14 +85,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func togglePopover(_ sender: Any?) {
         guard let button = statusItem?.button else { return }
         if popover?.isShown == true {
+            audioSession?.parentWillClose()
             popover?.performClose(sender)
         } else {
             // The status-item click does not activate an accessory app, and an
             // inactive app's windows can't appear over a fullscreen space —
             // without this the popover silently fails to open there.
             NSApp.activate()
+            if let hosting = popover?.contentViewController {
+                popover?.contentSize = hosting.view.fittingSize
+            }
             popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover?.contentViewController?.view.window?.makeKey()
+            audioSession?.parentDidShow()
         }
     }
 }

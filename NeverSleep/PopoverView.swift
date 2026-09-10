@@ -59,6 +59,8 @@ struct DisplayOffSlider: View {
 /// deep link → centered Quit. Live values come from `DisplayOffModel`.
 struct PopoverView: View {
     @Environment(DisplayOffModel.self) private var model
+    @Environment(AudioOutputModel.self) private var audioModel
+    @Environment(AudioOutputSession.self) private var audioSession
     @State private var launchAtLogin = false
     @State private var loginError: String?
     @State private var sliderIndex = 0
@@ -98,6 +100,7 @@ struct PopoverView: View {
                 }
             }
 
+            Group {
             if model.readFailed {
                 readFailureRow
             } else {
@@ -124,9 +127,20 @@ struct PopoverView: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
+            }
+            .onHover { hovering in
+                if hovering { audioSession.otherContentEntered() }
+            }
 
             Divider()
+            AudioOutputRow()
+                .environment(audioModel)
+                .environment(audioSession)
+            Divider()
             Toggle("登录时启动", isOn: $launchAtLogin)
+                .onHover { hovering in
+                    if hovering { audioSession.otherContentEntered() }
+                }
                 .toggleStyle(.switch)
                 .onChange(of: launchAtLogin) {
                     Task { await updateLaunchAtLogin() }
@@ -148,6 +162,9 @@ struct PopoverView: View {
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .center)
+            .onHover { hovering in
+                if hovering { audioSession.otherContentEntered() }
+            }
         }
         .padding(16)
         .frame(width: 300)
@@ -369,7 +386,74 @@ private struct PerSourceSliderRow: View {
     }
 }
 
+/// Audio-output row: icon + title + current device. Pointing opens the nested list.
+struct AudioOutputRow: View {
+    @Environment(AudioOutputModel.self) private var audio
+    @Environment(AudioOutputSession.self) private var session
+    @State private var anchor: NSView?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "speaker.wave.2.fill")
+                    .foregroundStyle(.secondary)
+                Text("音频输出")
+                    .font(.headline)
+                Spacer()
+                trailingLabel
+            }
+            if let writeError = audio.writeError {
+                Text(writeError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+        .background(AudioRowAnchor { anchor = $0 })
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            guard let anchor else { return }
+            switch audio.idleName {
+            case .loading, .empty:
+                return
+            case .named, .readFailed:
+                if hovering {
+                    session.rowEntered(anchor: anchor)
+                } else {
+                    session.rowExited()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var trailingLabel: some View {
+        switch audio.idleName {
+        case .loading:
+            Text("读取中…")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+        case .empty:
+            Text("无可用设备")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        case .readFailed:
+            Text("无法读取")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        case .named(let name):
+            Text(name)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+}
+
 #Preview {
+    let audio = AudioOutputModel()
+    let parent = NSPopover()
     PopoverView()
         .environment(DisplayOffModel())
+        .environment(audio)
+        .environment(AudioOutputSession(parent: parent, model: audio))
 }

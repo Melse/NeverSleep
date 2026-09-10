@@ -174,6 +174,42 @@
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't update login item: %@" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法更新登录项：%@" } }
       }
+    },
+    "音频输出" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Audio output" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "音频输出" } }
+      }
+    },
+    "无可用设备" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No devices available" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无可用设备" } }
+      }
+    },
+    "切换失败" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't switch output" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换失败" } }
+      }
+    },
+    "内置" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Built-in" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "内置" } }
+      }
+    },
+    "显示器" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Display" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示器" } }
+      }
+    },
+    "其他" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Other" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "其他" } }
+      }
     }
   },
   "version" : "1.0"

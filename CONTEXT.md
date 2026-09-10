@@ -32,7 +32,16 @@ _Avoid_: login item (when speaking product language), SMAppService (implementati
 The control that terminates NeverSleep entirely and removes it from the menu bar.
 _Avoid_: close, exit app (prefer Quit to match macOS)
 
+**Audio output**:
+The Mac's current default sound-output device, switched from a row in the popover.
+_Avoid_: speaker, sound device (when referring to this control)
+
+**Current output device**:
+The human-readable name of the audio output currently selected as the system default.
+_Avoid_: speaker name, HAL device
+
 ## Relationships
 
 - The **menu bar icon** shows a short **value label** for the current **display-off interval** and opens the **popover** on click.
-- The **popover** can change the **display-off interval**, toggle **launch at login**, and **quit**.
+- The **popover** can change the **display-off interval**, switch **audio output**, toggle **launch at login**, and **quit**.
+- Pointing at the **audio output** row opens a device list beside the row; a left click selects a **current output device** and closes the **popover**.
