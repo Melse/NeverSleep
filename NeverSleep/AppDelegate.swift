@@ -43,7 +43,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.contentViewController = hosting
         popover.contentSize = hosting.view.fittingSize
-        session.attachParent(popover)
         audioSession = session
         self.popover = popover
 
@@ -85,7 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func togglePopover(_ sender: Any?) {
         guard let button = statusItem?.button else { return }
         if popover?.isShown == true {
-            audioSession?.parentWillClose()
             popover?.performClose(sender)
         } else {
             // The status-item click does not activate an accessory app, and an

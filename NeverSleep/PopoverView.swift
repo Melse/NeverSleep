@@ -134,8 +134,6 @@ struct PopoverView: View {
 
             Divider()
             AudioOutputRow()
-                .environment(audioModel)
-                .environment(audioSession)
             Divider()
             Toggle("登录时启动", isOn: $launchAtLogin)
                 .onHover { hovering in

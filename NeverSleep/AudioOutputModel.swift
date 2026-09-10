@@ -35,6 +35,11 @@ enum AudioOutputSetOutcome: Sendable, Equatable {
     case confirmed
 }
 
+enum AudioOutputSetAttempt: Sendable, Equatable {
+    case failed
+    case pendingConfirm
+}
+
 enum AudioOutputIdleName: Sendable, Equatable {
     case loading
     case empty
@@ -75,14 +80,8 @@ nonisolated func transportLabel(_ transport: AudioTransportKind) -> String {
     }
 }
 
-nonisolated func mapAudioOutputSetResult(
-    status: OSStatus,
-    chosenID: AudioObjectID,
-    currentID: AudioObjectID
-) -> AudioOutputSetOutcome {
-    if status != noErr { return .failed }
-    if chosenID == currentID { return .alreadyCurrent }
-    return .pendingConfirm
+nonisolated func mapAudioOutputSetResult(status: OSStatus) -> AudioOutputSetAttempt {
+    status == noErr ? .pendingConfirm : .failed
 }
 
 nonisolated func audioOutputIdleName(
@@ -106,7 +105,7 @@ struct AudioOutputDevice: Identifiable, Sendable, Equatable {
 final class AudioOutputModel {
     var devices: [AudioOutputDevice] = []
     var currentName: String?
-    var isLoading = false
+    var isLoading = true
     var readFailed = false
     var writeError: String?
     var isSetting = false
@@ -119,11 +118,11 @@ final class AudioOutputModel {
         )
     }
 
-    private var listenerTokens: [AudioObjectPropertyListenerBlock] = []
+    private var listenerTokens: [(address: AudioObjectPropertyAddress, block: AudioObjectPropertyListenerBlock)] = []
     private var confirmTask: Task<AudioOutputSetOutcome, Never>?
+    private var isListening = false
 
     func refresh() {
-        isLoading = true
         let snapshot = Self.loadSnapshot()
         apply(snapshot)
         isLoading = false
@@ -131,7 +130,11 @@ final class AudioOutputModel {
 
     func startListening() {
         stopListening()
+        if devices.isEmpty {
+            isLoading = true
+        }
         refresh()
+        isListening = true
         addListener(selector: kAudioHardwarePropertyDevices)
         addListener(selector: kAudioHardwarePropertyDefaultOutputDevice)
     }
@@ -139,58 +142,55 @@ final class AudioOutputModel {
     func stopListening() {
         confirmTask?.cancel()
         confirmTask = nil
+        isListening = false
         let system = AudioObjectID(kAudioObjectSystemObject)
-        var devicesAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDevices,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var defaultAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        for token in listenerTokens {
-            AudioObjectRemovePropertyListenerBlock(system, &devicesAddress, DispatchQueue.main, token)
-            AudioObjectRemovePropertyListenerBlock(system, &defaultAddress, DispatchQueue.main, token)
+        for index in listenerTokens.indices {
+            AudioObjectRemovePropertyListenerBlock(
+                system,
+                &listenerTokens[index].address,
+                DispatchQueue.main,
+                listenerTokens[index].block
+            )
         }
         listenerTokens.removeAll()
     }
 
     func select(_ id: AudioObjectID) async -> AudioOutputSetOutcome {
         writeError = nil
-        let current = Self.defaultOutputID() ?? 0
-        if id == current {
+        if let current = Self.defaultOutputID(), id == current {
             return .alreadyCurrent
         }
         isSetting = true
         defer { isSetting = false }
 
-        let status = Self.setDefaultOutput(id)
-        let mapped = mapAudioOutputSetResult(status: status, chosenID: id, currentID: current)
-        switch mapped {
+        switch mapAudioOutputSetResult(status: Self.setDefaultOutput(id)) {
         case .failed:
             writeError = String(localized: "切换失败")
             return .failed
-        case .alreadyCurrent:
-            return .alreadyCurrent
-        case .pendingConfirm, .confirmed:
+        case .pendingConfirm:
             let confirmed = await waitForDefault(id)
-            if confirmed == .confirmed {
+            switch confirmed {
+            case .confirmed:
                 refresh()
                 return .confirmed
+            case .failed:
+                writeError = String(localized: "切换失败")
+                refresh()
+                return .failed
+            case .pendingConfirm:
+                return .pendingConfirm
+            case .alreadyCurrent:
+                return .failed
             }
-            writeError = String(localized: "切换失败")
-            refresh()
-            return .failed
         }
     }
 
     private func waitForDefault(_ id: AudioObjectID) async -> AudioOutputSetOutcome {
+        confirmTask?.cancel()
         let task = Task { () -> AudioOutputSetOutcome in
             let deadline = Date().addingTimeInterval(8)
             while Date() < deadline {
-                if Task.isCancelled { return .failed }
+                if Task.isCancelled { return .pendingConfirm }
                 if Self.defaultOutputID() == id { return .confirmed }
                 try? await Task.sleep(for: .milliseconds(100))
             }
@@ -228,13 +228,14 @@ final class AudioOutputModel {
         )
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             DispatchQueue.main.async {
-                self?.refresh()
+                guard let self, self.isListening else { return }
+                self.refresh()
             }
         }
         let system = AudioObjectID(kAudioObjectSystemObject)
         let status = AudioObjectAddPropertyListenerBlock(system, &address, DispatchQueue.main, block)
         if status == noErr {
-            listenerTokens.append(block)
+            listenerTokens.append((address, block))
         }
     }
 
@@ -246,7 +247,7 @@ final class AudioOutputModel {
     }
 
     private static func loadSnapshot() -> HALSnapshot {
-        let raw = allDeviceIDs().compactMap(facts(for:))
+        let raw = allDeviceIDs().map(facts(for:))
         let filtered = filterDefaultSelectableOutputs(raw)
         let currentID = defaultOutputID()
         let currentName = currentID.flatMap { id in
@@ -278,7 +279,7 @@ final class AudioOutputModel {
         return status == noErr ? ids : []
     }
 
-    private static func facts(for id: AudioObjectID) -> AudioDeviceFacts? {
+    private static func facts(for id: AudioObjectID) -> AudioDeviceFacts {
         AudioDeviceFacts(
             id: id,
             name: name(of: id) ?? "",

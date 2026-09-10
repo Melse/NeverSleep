@@ -20,16 +20,14 @@ final class AudioOutputSession: NSObject, NSPopoverDelegate {
     private var closeWorkItem: DispatchWorkItem?
     private var pointerInRow = false
     private var pointerInList = false
-    private var fallbackRung = "default"
-    private var parentWasTransient = true
     private var eventMonitor: Any?
-
-    var lastFallbackRung: String { fallbackRung }
+    private var didTearDown = false
 
     init(parent: NSPopover, model: AudioOutputModel) {
         self.parent = parent
         self.model = model
         super.init()
+        parent.delegate = self
         nested.behavior = .applicationDefined
         nested.delegate = self
         nested.contentViewController = NSHostingController(
@@ -37,16 +35,14 @@ final class AudioOutputSession: NSObject, NSPopoverDelegate {
         )
     }
 
-    func attachParent(_ parent: NSPopover) {
-        self.parent = parent
-        parent.delegate = self
-    }
-
     func parentDidShow() {
+        didTearDown = false
         model.startListening()
     }
 
     func parentWillClose() {
+        guard !didTearDown else { return }
+        didTearDown = true
         cancelTimers()
         hideList()
         model.stopListening()
@@ -104,28 +100,12 @@ final class AudioOutputSession: NSObject, NSPopoverDelegate {
     private func showList() {
         guard let anchorView, parent?.isShown == true else { return }
         if nested.isShown { return }
+        parent?.behavior = .applicationDefined
+        installOutsideClickMonitor()
         let edge = preferredEdge(for: anchorView)
         nested.contentSize = NSSize(width: 240, height: min(listHeight(), remainingHeight(from: anchorView)))
-        enableFirstMouse(in: nested)
         nested.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: edge)
-        if parent?.isShown != true {
-            parent?.behavior = .applicationDefined
-            parentWasTransient = true
-            fallbackRung = "parent-applicationDefined"
-            if let parent, let button = anchorView.window.map({ _ in anchorView }) {
-                _ = button
-            }
-            parent?.show(
-                relativeTo: parentAnchorRect(),
-                of: parentAnchorView() ?? anchorView,
-                preferredEdge: .minY
-            )
-            nested.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: edge)
-            installOutsideClickMonitor()
-            if parent?.isShown != true {
-                fallbackRung = "child-window"
-            }
-        }
+        nested.contentViewController?.view.window?.acceptsMouseMovedEvents = true
     }
 
     private func hideList() {
@@ -173,16 +153,14 @@ final class AudioOutputSession: NSObject, NSPopoverDelegate {
         guard let screen = view.window?.screen ?? NSScreen.main else { return 280 }
         let rect = view.convert(view.bounds, to: nil)
         let windowRect = view.window?.convertToScreen(rect) ?? rect
-        return max(80, screen.visibleFrame.maxY - windowRect.minY - 12)
+        let below = windowRect.minY - screen.visibleFrame.minY - 12
+        let above = screen.visibleFrame.maxY - windowRect.maxY - 12
+        return max(80, max(below, above))
     }
 
     private func listHeight() -> CGFloat {
         let rows = max(model.devices.count, 1)
         return CGFloat(min(rows, 12)) * 28 + 12
-    }
-
-    private func enableFirstMouse(in popover: NSPopover) {
-        popover.contentViewController?.view.window?.acceptsMouseMovedEvents = true
     }
 
     private func parentAnchorView() -> NSView? {
@@ -215,9 +193,7 @@ final class AudioOutputSession: NSObject, NSPopoverDelegate {
 
     private func restoreParentTransientIfNeeded() {
         removeOutsideClickMonitor()
-        if parentWasTransient {
-            parent?.behavior = .transient
-        }
+        parent?.behavior = .transient
     }
 
     func popoverWillClose(_ notification: Notification) {
@@ -248,7 +224,6 @@ struct AudioRowAnchor: NSViewRepresentable {
             if let onView { onView(self) }
         }
 
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 }
 
@@ -257,40 +232,73 @@ struct AudioOutputListView: View {
     var session: AudioOutputSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(model.devices) { device in
-                Button {
-                    session.select(device.id)
-                } label: {
-                    HStack {
-                        Text(device.name)
-                            .lineLimit(1)
-                        Spacer()
-                        if model.isSetting && device.isCurrent == false {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else if device.isCurrent {
-                            Image(systemName: "checkmark")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(model.devices) { device in
+                    Button {
+                        session.select(device.id)
+                    } label: {
+                        HStack {
+                            Text(device.name)
+                                .lineLimit(1)
+                            Spacer()
+                            if model.isSetting && !device.isCurrent {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else if device.isCurrent {
+                                Image(systemName: "checkmark")
+                            }
                         }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .disabled(model.isSetting)
                 }
-                .buttonStyle(.plain)
-                .disabled(model.isSetting)
             }
         }
         .padding(.vertical, 6)
         .frame(minWidth: 220)
-        .background(
-            AudioRowAnchor { _ in }
-                .onHover { hovering in
-                    if hovering { session.listEntered() } else { session.listExited() }
-                }
-        )
-        .onHover { hovering in
+        .background(ListTrackingView { hovering in
             if hovering { session.listEntered() } else { session.listExited() }
+        })
+    }
+}
+
+/// Tracks pointer enter/exit even when the nested popover window is not key.
+private struct ListTrackingView: NSViewRepresentable {
+    var onHover: (Bool) -> Void
+
+    func makeNSView(context: Context) -> HoverView {
+        let view = HoverView()
+        view.onHover = onHover
+        return view
+    }
+
+    func updateNSView(_ nsView: HoverView, context: Context) {
+        nsView.onHover = onHover
+    }
+
+    final class HoverView: NSView {
+        var onHover: ((Bool) -> Void)?
+        private var tracking: NSTrackingArea?
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let tracking { removeTrackingArea(tracking) }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            tracking = area
         }
+
+        override func mouseEntered(with event: NSEvent) { onHover?(true) }
+        override func mouseExited(with event: NSEvent) { onHover?(false) }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 }

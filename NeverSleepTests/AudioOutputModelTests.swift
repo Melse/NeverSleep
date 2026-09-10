@@ -10,6 +10,19 @@ import Testing
 
 struct AudioOutputModelTests {
 
+    @Test func filterDropsDeadOutputs() {
+        let dead = AudioDeviceFacts(
+            id: 9,
+            name: "Dead",
+            isAlive: false,
+            isHidden: false,
+            hasOutputStreams: true,
+            canBeDefaultOutput: true,
+            transport: .usb
+        )
+        #expect(filterDefaultSelectableOutputs([dead]).isEmpty)
+    }
+
     @Test func filterDropsInputOnlyDevices() {
         let inputOnly = AudioDeviceFacts(
             id: 1,
@@ -131,18 +144,11 @@ struct AudioOutputModelTests {
     }
 
     @Test func setResultMapperTreatsNonZeroAsFailure() {
-        let result = mapAudioOutputSetResult(status: 1, chosenID: 2, currentID: 1)
-        #expect(result == .failed)
-    }
-
-    @Test func setResultMapperTreatsAlreadyCurrentAsConfirmed() {
-        let result = mapAudioOutputSetResult(status: 0, chosenID: 7, currentID: 7)
-        #expect(result == .alreadyCurrent)
+        #expect(mapAudioOutputSetResult(status: 1) == .failed)
     }
 
     @Test func setResultMapperTreatsZeroStatusAsPendingConfirm() {
-        let result = mapAudioOutputSetResult(status: 0, chosenID: 8, currentID: 7)
-        #expect(result == .pendingConfirm)
+        #expect(mapAudioOutputSetResult(status: 0) == .pendingConfirm)
     }
 
     @Test func idleNameTokensAreDistinctFromDeviceName() {
