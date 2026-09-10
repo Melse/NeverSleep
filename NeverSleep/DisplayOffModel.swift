@@ -54,7 +54,7 @@ private nonisolated func powerSourceFromSectionHeader(_ line: String) -> PowerSo
     }
 }
 
-/// Nearest stop index (0…12) for a display-off value in minutes.
+/// Nearest stop index for a display-off value in minutes.
 nonisolated func nearestStopIndex(for minutes: Int, stops: [Int] = displayOffStops) -> Int {
     var best = 0
     var bestDistance = Int.max

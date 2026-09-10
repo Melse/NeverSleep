@@ -60,18 +60,19 @@ struct DisplayOffModelTests {
     }
 
     @Test func nearestStopIndexSnaps() {
-        // 7 → 5 (index 4); 12 → 10 (index 5); 0 → Never (index 0); 180 → index 12
-        #expect(nearestStopIndex(for: 7) == 4)
-        #expect(nearestStopIndex(for: 12) == 5)
+        // Stops: Never(0), 1, 30, 60 → indexes 0…3
+        // 7 → 1 (index 1); 0 → Never (index 0); 180 → 60 (index 3)
+        #expect(nearestStopIndex(for: 7) == 1)
         #expect(nearestStopIndex(for: 0) == 0)
-        #expect(nearestStopIndex(for: 180) == 12)
+        #expect(nearestStopIndex(for: 180) == 3)
         // exact stops map to themselves
-        #expect(nearestStopIndex(for: 30) == 7)
-        #expect(nearestStopIndex(for: 90) == 9)
+        #expect(nearestStopIndex(for: 1) == 1)
+        #expect(nearestStopIndex(for: 30) == 2)
+        #expect(nearestStopIndex(for: 60) == 3)
     }
 
     @Test func nearestStopIndexTieBreaksDown() {
-        // 4 is equidistant from 3 (idx 3) and 5 (idx 4) → lower wins
-        #expect(nearestStopIndex(for: 4) == 3)
+        // 45 is equidistant from 30 (idx 2) and 60 (idx 3) → lower wins
+        #expect(nearestStopIndex(for: 45) == 2)
     }
 }

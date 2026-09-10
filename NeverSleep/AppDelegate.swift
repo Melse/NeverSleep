@@ -77,6 +77,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover?.isShown == true {
             popover?.performClose(sender)
         } else {
+            // The status-item click does not activate an accessory app, and an
+            // inactive app's windows can't appear over a fullscreen space —
+            // without this the popover silently fails to open there.
+            NSApp.activate()
             popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover?.contentViewController?.view.window?.makeKey()
         }

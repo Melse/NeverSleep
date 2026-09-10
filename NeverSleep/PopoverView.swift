@@ -9,8 +9,8 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-/// The 13 system stops, left→right: Never(0) … 180 minutes. Equidistant on track.
-nonisolated let displayOffStops: [Int] = [0, 1, 2, 3, 5, 10, 20, 30, 60, 90, 120, 150, 180]
+/// The 4 stops, left→right: Never(0), 1, 30, 60 minutes. Equidistant on track.
+nonisolated let displayOffStops: [Int] = [0, 1, 30, 60]
 
 /// System-aligned wording for a display-off value in minutes, localized via
 /// the string catalog (EN + zh-Hans).
@@ -27,7 +27,8 @@ nonisolated func displayOffStopLabel(_ minutes: Int) -> String {
     }
 }
 
-/// Snap slider over the 13 stop indexes (0…12), equidistant, with a tick row.
+/// Snap slider over the stop indexes, equidistant. Stop indicators are the
+/// stepped slider's native tick marks, which sit exactly at the thumb rests.
 /// `onCommit` fires when the user releases the thumb; `onDragChange` reports
 /// drag start/end for live preview.
 struct DisplayOffSlider: View {
@@ -37,29 +38,19 @@ struct DisplayOffSlider: View {
     var onDragChange: (Bool) -> Void = { _ in }
 
     var body: some View {
-        VStack(spacing: 5) {
-            Slider(
-                value: Binding(
-                    get: { Double(index) },
-                    set: { index = Int($0.rounded()) }
-                ),
-                in: 0...12,
-                step: 1,
-                onEditingChanged: { editing in
-                    onDragChange(editing)
-                    if !editing { onCommit() }
-                }
-            )
-            .disabled(disabled)
-            HStack(spacing: 0) {
-                ForEach(0..<13, id: \.self) { i in
-                    Capsule()
-                        .fill(index == i ? Color.accentColor : Color.secondary.opacity(0.45))
-                        .frame(width: 2, height: index == i ? 8 : 5)
-                    if i < 12 { Spacer(minLength: 0) }
-                }
+        Slider(
+            value: Binding(
+                get: { Double(index) },
+                set: { index = Int($0.rounded()) }
+            ),
+            in: 0...Double(displayOffStops.count - 1),
+            step: 1,
+            onEditingChanged: { editing in
+                onDragChange(editing)
+                if !editing { onCommit() }
             }
-        }
+        )
+        .disabled(disabled)
     }
 }
 
@@ -353,7 +344,7 @@ private struct PerSourceSliderRow: View {
                     get: { Double(index) },
                     set: { index = Int($0.rounded()) }
                 ),
-                in: 0...12,
+                in: 0...Double(displayOffStops.count - 1),
                 step: 1,
                 onEditingChanged: { editing in
                     isDragging = editing
